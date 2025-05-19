@@ -10,7 +10,6 @@ interface SearchState {
 }
 
 export default function Home() {
-  const [advocates, setAdvocates] = useState<Advocate[]>([]);
   const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
   const [searchState, setSearchState] = useState<SearchState>({
     type: 'list',
@@ -23,20 +22,19 @@ export default function Home() {
   const fetchAdvocates = async (page: number) => {
     const response = await fetch(`/api/advocates?limit=${limit}&page=${page}`);
     const data = await response.json();
-    setAdvocates(data.data);
     setFilteredAdvocates(data.data);
-    setAdditionalRecords(data.data.length === limit);
+    setAdditionalRecords(data.additionalRecords);
   };
 
   const fetchSearchResults = async (searchTerm: string, page: number) => {
     const response = await fetch(
       `/api/advocates/search?searchterm=${encodeURIComponent(
         searchTerm
-      )}&limit=${limit + 1}&page=${page}`
+      )}&limit=${limit}&page=${page}`
     );
     const data = await response.json();
-    setFilteredAdvocates(data.data.slice(0, limit));
-    setAdditionalRecords(data.data.length > limit);
+    setFilteredAdvocates(data.data);
+    setAdditionalRecords(data.additionalRecords);
   };
 
   useEffect(() => {

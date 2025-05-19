@@ -10,14 +10,15 @@ const setup = () => {
     console.error('DATABASE_URL is not set');
     return {
       selectAdvocates: () => ({
-        from: () => ({ data: [], limit: 0, offset: 0 } as PagedData<Advocate>),
+        from: () => ({ data: [], limit: 0, offset: 0, additionalRecords: false } as PagedData<Advocate>),
       }),
       queryAdvocates: () =>
-        ({ data: [], limit: 0, offset: 0 } as PagedData<Advocate>),
+        ({ data: [], limit: 0, offset: 0, additionalRecords: false } as PagedData<Advocate>),
     };
   }
 
   // for query purposes
+  // note that these calls always query for an additional record to help determine if additional records exist
   const queryClient = postgres(process.env.DATABASE_URL);
   const db = drizzle(queryClient);
 
@@ -26,17 +27,17 @@ const setup = () => {
       const data = await db
         .select()
         .from(advocates)
-        .limit(limit)
+        .limit(limit + 1)
         .offset(offset);
       return {
-        data,
+        data: data.slice(0, limit),
         limit,
         offset,
+        additionalRecords: data.length > limit,
       };
     },
   });
 
-  //todo: include numbers in the search
   const queryAdvocates = async (
     searchTerm: string,
     limit = 10,
@@ -54,13 +55,14 @@ const setup = () => {
           ilike(advocates.degree, searchPattern)
         )
       )
-      .limit(limit)
+      .limit(limit + 1)
       .offset(offset);
 
     return {
-      data,
+      data: data.slice(0, limit),
       limit,
       offset,
+      additionalRecords: data.length > limit,
     };
   };
 
