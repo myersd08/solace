@@ -1,12 +1,11 @@
-import db from "../../../db";
-import { advocates } from "../../../db/schema";
-import { advocateData } from "../../../db/seed/advocates";
+import db from '../../../db';
 
-export async function GET() {
-  // Uncomment this line to use a database
-  // const data = await db.select().from(advocates);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = Number(searchParams.get('page')) || 1;
+  const limit = Number(searchParams.get('limit')) || 10;
+  const offset = (page - 1) * limit;
 
-  const data = advocateData;
-
-  return Response.json({ data });
+  const data = await db.selectAdvocates().from(limit, offset);
+  return Response.json(data);
 }
