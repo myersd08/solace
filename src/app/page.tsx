@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Advocate } from '../db/schema';
+import { Button } from 'primereact/button';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { InputText } from 'primereact/inputtext';
 
 interface SearchState {
   type: 'list' | 'search';
@@ -19,6 +23,22 @@ export default function Home() {
   const limit = 5;
   const [additionalRecords, setAdditionalRecords] = useState(false);
 
+  //todo: this should go into a UI utilities folder
+  const formatPhoneNumber = (
+    phoneNumber: number | null | undefined
+  ): string => {
+    const phoneString = String(phoneNumber);
+    if (!phoneString || phoneString === 'undefined' || phoneString === 'null')
+      return '';
+
+    const cleaned = phoneString.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    return phoneString;
+  };
+
   const fetchAdvocates = async (page: number) => {
     const response = await fetch(`/api/advocates?limit=${limit}&page=${page}`);
     const data = await response.json();
@@ -26,7 +46,7 @@ export default function Home() {
     setAdditionalRecords(data.additionalRecords);
   };
 
-  const fetchSearchResults = async (searchTerm: string, page: number) => {
+  const fetchSearchAdvocates = async (searchTerm: string, page: number) => {
     const response = await fetch(
       `/api/advocates/search?searchterm=${encodeURIComponent(
         searchTerm
@@ -43,7 +63,7 @@ export default function Home() {
       fetchAdvocates(searchState.page);
     } else {
       console.log('searching advocates...');
-      fetchSearchResults(searchState.term, searchState.page);
+      fetchSearchAdvocates(searchState.term, searchState.page);
     }
   }, [searchState]);
 
@@ -52,13 +72,12 @@ export default function Home() {
     const newSearchTerm = e.target.value;
 
     if (!newSearchTerm) {
-      //setFilteredAdvocates(advocates);
       setSearchState({ type: 'list', term: '', page: 1 });
       return;
     }
 
     setSearchState({ type: 'search', term: newSearchTerm, page: 1 });
-    await fetchSearchResults(newSearchTerm, 1);
+    await fetchSearchAdvocates(newSearchTerm, 1);
   };
 
   const onSearchReset = () => {
@@ -75,66 +94,75 @@ export default function Home() {
 
   return (
     <main style={{ margin: '24px' }}>
-      <h1>Solace Advocates</h1>
+      <h1 className='text-2xl font-bold text-center w-full'>
+        Solace Advocates
+      </h1>
       <br />
       <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for:
-          <input type='text' id='search-term' />
-        </p>
-        <input
-          style={{ border: '1px solid black' }}
+      <div className='w-full mb-4'>
+        Search for:
+        <InputText
+          id='search-term'
+          value={searchState.term}
           onChange={onSearchTermChange}
+          className='ml-2 border border-gray-300 rounded'
         />
-        <button onClick={onSearchReset} disabled={searchState.term === ''}>
-          Reset Search
-        </button>
+        <Button
+          label='Reset Search'
+          onClick={onSearchReset}
+          severity='secondary'
+          className='ml-2'
+        />
       </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>City</th>
-            <th>Degree</th>
-            <th>Specialties</th>
-            <th>Years of Experience</th>
-            <th>Phone Number</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate, index) => {
-            return (
-              <tr key={advocate.id}>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {(advocate.specialties as string[]).map(
-                    (s: string, idx: number) => (
-                      <div key={`${s}-${idx}`}>{s}</div>
-                    )
-                  )}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <DataTable value={filteredAdvocates} className='p-datatable-sm'>
+        <Column
+          field='firstName'
+          header='First Name'
+          bodyClassName='align-top'
+        />
+        <Column field='lastName' header='Last Name' bodyClassName='align-top' />
+        <Column field='city' header='City' bodyClassName='align-top' />
+        <Column field='degree' header='Degree' bodyClassName='align-top' />
+        <Column
+          field='specialties'
+          header='Specialties'
+          bodyClassName='align-top'
+          body={(rowData) => (
+            <div>
+              {(rowData.specialties as string[]).map(
+                (s: string, idx: number) => (
+                  <div key={`${s}-${idx}`}>{s}</div>
+                )
+              )}
+            </div>
+          )}
+        />
+        <Column
+          field='yearsOfExperience'
+          header='Years of Experience'
+          bodyClassName='align-top'
+        />
+        <Column
+          field='phoneNumber'
+          header='Phone Number'
+          bodyClassName='align-top'
+          body={(rowData) => formatPhoneNumber(rowData.phoneNumber)}
+        />
+      </DataTable>
       <div>
-        <button onClick={onPreviousPage} disabled={searchState.page === 1}>
-          Previous
-        </button>
-        <button onClick={onNextPage} disabled={!additionalRecords}>
-          Next
-        </button>
+        <Button
+          label='Previous'
+          onClick={onPreviousPage}
+          disabled={searchState.page === 1}
+          severity='secondary'
+          className='mr-2'
+        />
+        <Button
+          label='Next'
+          onClick={onNextPage}
+          disabled={!additionalRecords}
+          severity='secondary'
+        />
       </div>
     </main>
   );
